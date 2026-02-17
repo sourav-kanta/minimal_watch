@@ -1,0 +1,87 @@
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+
+/ {
+    chosen {
+        zephyr,display = &sdl_display;
+    };
+
+    sdl_display: sdl_display {
+        compatible = "zephyr,sdl-dc";
+        width = <240>;
+        height = <240>;
+    };
+
+    /* Application-level gpio pin definitions */
+    gpio_pins: gpio_pins {
+        compatible = "gpio-keys";
+        gpio_pg: gpio_pg {
+            gpios = <&gpio0 0 GPIO_ACTIVE_HIGH>;
+            label = "PG";
+            zephyr,code = <INPUT_KEY_0>;
+        };
+        gpio_stat1: gpio_stat1 {
+            gpios = <&gpio0 1 GPIO_ACTIVE_HIGH>;
+            label = "STAT1";
+            zephyr,code = <INPUT_KEY_1>;
+        };
+        gpio_stat2: gpio_stat2 {
+            gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
+            label = "STAT2";
+            zephyr,code = <INPUT_KEY_2>;
+        };
+    };
+    
+    switches: switches {
+        compatible = "gpio-keys";
+        debounce-interval-ms = <200>;
+        gpio_wakeup: gpio_wakeup {
+            gpios = <&gpio0 3 GPIO_ACTIVE_HIGH>;
+            label = "WAKE";
+            zephyr,code = <INPUT_KEY_3>;
+        };
+    };
+};
+
+&gpio0 {
+    status="okay";
+    ngpios = <32>;
+    /*SDL Mapping as a child of the emulated controller */
+    sdl_gpio {
+        compatible = "zephyr,gpio-emul-sdl";
+        scancodes = <30 31 32 33>;
+    };
+};
+
+&flash0 {
+    reg = <0x00000000 DT_SIZE_M(4)>;
+    partitions {
+        /delete-node/ partition@0;
+        /delete-node/ partition@c000;
+        /delete-node/ partition@75000;
+        /delete-node/ partition@de000;
+        /delete-node/ partition@fc000;
+        compatible = "fixed-partitions";
+        #address-cells = <1>;
+        #size-cells = <1>;
+
+        slot0_partition: partition@0 {
+            label = "image-0";
+            reg = <0x00000000 DT_SIZE_M(2)>;
+        };
+        
+        image_partition: partition@200000 {
+            label = "image-1";
+            reg = <0x00200000 DT_SIZE_K(1968)>;
+        };
+
+        storage_partition: partition@3EC000 {
+            label = "storage";
+            reg = <0x003EC000 DT_SIZE_K(32)>;
+        };
+    };
+};
+
+&input_sdl_touch {
+    status = "okay";
+    display = <&sdl_display>;
+};
