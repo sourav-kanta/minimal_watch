@@ -13,3 +13,4 @@ add_subdirectory(src/managers)
 add_subdirectory(src/threads)
 
 target_sources(app PRIVATE ${root_sources})
+

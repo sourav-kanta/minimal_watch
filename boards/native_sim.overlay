@@ -1,4 +1,5 @@
 #include <zephyr/dt-bindings/input/input-event-codes.h>
+#include <zephyr/dt-bindings/lvgl/lvgl.h>
 
 / {
     chosen {
@@ -7,8 +8,8 @@
 
     sdl_display: sdl_display {
         compatible = "zephyr,sdl-dc";
-        width = <240>;
-        height = <240>;
+        width = <128>;
+        height = <160>;
     };
 
     /* Application-level gpio pin definitions */
@@ -29,6 +30,26 @@
             label = "STAT2";
             zephyr,code = <INPUT_KEY_2>;
         };
+        key_prev: key_prev {
+            gpios = <&gpio0 4  GPIO_ACTIVE_HIGH>;
+            label = "Next Item";
+            zephyr,code = <INPUT_KEY_LEFT>; 
+        };
+        key_next: key_next {
+            gpios = <&gpio0 5  GPIO_ACTIVE_HIGH>;
+            label = "Previous Item";
+            zephyr,code = <INPUT_KEY_RIGHT>;
+        };
+        key_ok: key_ok {
+            gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;
+            label = "Ok";
+            zephyr,code = <INPUT_KEY_ENTER>;
+        };
+        key_back: key_back {
+            gpios = <&gpio0 7  GPIO_ACTIVE_HIGH>;
+            label = "back";
+            zephyr,code = <INPUT_KEY_BACK>;
+        };
     };
     
     switches: switches {
@@ -40,6 +61,14 @@
             zephyr,code = <INPUT_KEY_3>;
         };
     };
+
+    lvgl_keypad {
+        compatible = "zephyr,lvgl-keypad-input";
+        input = <&gpio_pins>;
+        input-codes = <INPUT_KEY_LEFT INPUT_KEY_RIGHT INPUT_KEY_ENTER INPUT_KEY_BACK>;
+        lvgl-codes = <LV_KEY_LEFT LV_KEY_RIGHT LV_KEY_ENTER LV_KEY_ESC>;
+    };
+    
 };
 
 &gpio0 {
@@ -48,7 +77,7 @@
     /*SDL Mapping as a child of the emulated controller */
     sdl_gpio {
         compatible = "zephyr,gpio-emul-sdl";
-        scancodes = <30 31 32 33>;
+        scancodes = <30 31 32 33 34 35 36 37>;
     };
 };
 

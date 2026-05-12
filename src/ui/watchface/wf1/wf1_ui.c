@@ -1,12 +1,13 @@
 #include <lvgl.h>
 #include <zephyr/logging/log.h>
+#include "common_types.h"
 #include "ui/watchface/wf_picker.h"
 #include "ui/watchface/wf1/assets/bg_img.h"
 #include "ui/watchface/wf1/assets/min_img.h"
 
 LOG_MODULE_REGISTER(wf1, LOG_LEVEL_INF);
 
-static watchface wf1;
+static watchface_t wf1;
 lv_obj_t * container=NULL;
 lv_obj_t * bg_img=NULL;
 lv_obj_t * min_hand_img=NULL;
@@ -38,13 +39,10 @@ void wf1_draw(lv_obj_t* root) {
     LOG_INF("Finished drawing watchface"); 
 }
 
-void wf1_update(lv_obj_t* root,
-        wf_event event) {
-    switch(event.event_type) {
-        case UI_WF_TIMER_UPDATE :
-            date_time *data = event.data;
-            int ang = data->sec*3600/60;
-            lv_image_set_rotation(min_hand_img,ang);
+void wf1_update(event_t *event) {
+    switch(event->ev) {
+        case TICK_UPDATE :
+            LOG_INF("Got tick");
     }
 }
 
@@ -52,7 +50,7 @@ void wf1_del_wf(lv_obj_t* root) {
 
 }
 
-static watchface wf1 = {
+static watchface_t wf1 = {
     .name = "Moon WF",
     .draw_watchface = &wf1_draw,
     .update_watchface = &wf1_update,

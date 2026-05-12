@@ -54,23 +54,25 @@ void lvgl_thread(void *dummy1, void *dummy2, void *dummy3)
     // This is needed since on wakeup of device from
     // background mode the lvgl idle timer is stale
     lv_display_trigger_activity(NULL);
+    int64_t time_prev, time_now = k_uptime_get();
     while (atomic_get(&lvgl_run_flag) == 1) {
+        time_prev = time_now;
+        time_now = k_uptime_get();
+        int64_t elapsed = time_now - time_prev;
         // Tell LVGL how much time has passed
-        lv_tick_inc(25);
+        lv_tick_inc((uint32_t) elapsed);
 
-        lv_timer_handler();
-
-        // Sleep for a short period
-        k_msleep(25);
-
+        uint32_t lvgl_next_refresh_interval = lv_timer_handler();
         uint32_t idle_time = 
             lv_display_get_inactive_time(NULL);
-        if(idle_time > 5000) {
+        if(idle_time > MAX_USER_INPUT_TIMEOUT) {
             atomic_set(&lvgl_run_flag, 0);
             // Enter background mode 
             deinit_ui();
             break;
         }
+        // Sleep for a short period
+        k_msleep(lvgl_next_refresh_interval);
 
     }
 }
@@ -92,7 +94,7 @@ void init_lvgl_thread() {
 }
 
 void stop_lvgl_thread() {
-    atomic_set(&lvgl_run_flag, 0);
+    // atomic_set(&lvgl_run_flag, 0);
     k_msleep(50);
     lvgl_tid = NULL;
 }

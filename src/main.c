@@ -11,16 +11,23 @@
 #include <zephyr/logging/log.h>
 #include "managers/ui_manager.h"
 #include "managers/gpio_manager.h"
+#include "managers/ble_manager.h"
+#include "managers/input_dev_manager.h"
+#include "managers/pm_manager.h"
+#include "managers/event_manager.h"
 
 LOG_MODULE_REGISTER(app, LOG_LEVEL_INF);
-
 
 /**
  * @brief Init work on startup
  */
 void do_init_work() {
-    init_ui();
     init_gpio_pins();
+    init_ble();
+    setup_keyboard();
+    init_ui();
+    init_pm();
+    init_events();
 }
 
 int main(void)
