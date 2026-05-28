@@ -162,6 +162,8 @@ void handle_root_scr_actions(lv_event_t *ev) {
         ges_dir = lv_indev_get_gesture_dir(inp_dev);
     }
 
+    LOG_INF("callback received %d", code);
+
     if(code == LV_EVENT_KEY) {
         key = lv_event_get_key(ev);
     // Skip the fake key 0 SDL sends  

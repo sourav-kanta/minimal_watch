@@ -94,7 +94,7 @@ void set_runtime_state_with_hooks(runtime_state_t target_state,
         worker_pool_purge_queue(); 
         
         current_state = STATE_SLEEP;
-        LOG_INF("[FSM] Complete system drop down to zero overhead sleep mode.");
+        LOG_DBG("[FSM] Complete system drop down to zero overhead sleep mode.");
     }
 
     k_spin_unlock(&state_lock, key);
@@ -108,12 +108,12 @@ static void execute_curfew_transition_locked(void)
     if (active_hook_count == 0 && !worker_pool_has_work()) {
         current_state = STATE_SLEEP;
         worker_pool_suspend_all();
-        LOG_INF("[FSM] Nominal window expired with no loads pending. Sleep engaged.");
+        LOG_DBG("[FSM] Nominal window expired with no loads pending. Sleep engaged.");
         return;
     }
 
     current_state = STATE_GRACE_PERIOD;
-    LOG_INF("[FSM] Window limit reached. Moving to Grace Period. Workers allowed to finish tasks.");
+    LOG_DBG("[FSM] Window limit reached. Moving to Grace Period. Workers allowed to finish tasks.");
     
     k_timer_start(&grace_period_timer, K_MSEC(WINDOW_GRACE_PERIOD_MS), K_FOREVER);
 
@@ -179,7 +179,7 @@ static void sys_maint_thread_entry(void *p1, void *p2, void *p3)
                     watchdog_force_all_cooperative_abort();
                     worker_pool_suspend_all();
                     current_state = STATE_SLEEP;
-                    LOG_INF("[FSM] Maintenance and active tasks fully processed. Entering sleep.");
+                    LOG_DBG("[FSM] Maintenance and active tasks fully processed. Entering sleep.");
                 }
                 k_spin_unlock(&state_lock, key);
             }

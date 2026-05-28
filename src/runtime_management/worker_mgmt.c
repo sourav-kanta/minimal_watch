@@ -19,12 +19,12 @@ static void curfew_settlement_expiry(struct k_timer *timer_id)
     
     if (state == STATE_BACKGROUND_ACTIVE || state == STATE_UI_ACTIVE) {
         if (is_system_completely_idle()) {
-            LOG_INF("[Mgmt] Stabilization cushion dry for 10ms. Relaying early curfew transition.");
+            LOG_DBG("[Mgmt] Stabilization cushion dry for 10ms. Relaying early curfew transition.");
             runtime_manager_demote_to_curfew(); 
         }
     } else if (state == STATE_GRACE_PERIOD) {
         if (is_system_completely_idle()) {
-            LOG_INF("[Mgmt] Grace channel fully parsed. Initiating state drop.");
+            LOG_DBG("[Mgmt] Grace channel fully parsed. Initiating state drop.");
             set_runtime_state_with_hooks(STATE_SLEEP, NULL, 0); 
         }
     }

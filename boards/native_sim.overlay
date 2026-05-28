@@ -62,13 +62,6 @@
         };
     };
 
-    lvgl_keypad {
-        compatible = "zephyr,lvgl-keypad-input";
-        input = <&gpio_pins>;
-        input-codes = <INPUT_KEY_LEFT INPUT_KEY_RIGHT INPUT_KEY_ENTER INPUT_KEY_BACK>;
-        lvgl-codes = <LV_KEY_LEFT LV_KEY_RIGHT LV_KEY_ENTER LV_KEY_ESC>;
-    };
-    
 };
 
 &gpio0 {
