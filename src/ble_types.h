@@ -3,8 +3,8 @@
 
 #include "common_types.h" 
 
-#define MAX_BLE_PAYLOAD_SIZE 64
-#define BLE_FIFO_SIZE 100
+#define MAX_BLE_PAYLOAD_SIZE 256
+#define BLE_FIFO_SIZE 20
 
 #define BLE_MAGIC 0xA5
 #define BLE_HDR_SIZE 3
@@ -21,6 +21,8 @@
 typedef uint8_t ble_opcode_t;
 
 #define BLE_OP_TIME_UPDATE ((ble_opcode_t)0x01)
+#define BLE_OP_WEATHER_UPDATE ((ble_opcode_t)0x02)
+#define BLE_OP_APP_REQUEST ((ble_opcode_t)0x03)
 
 typedef enum {
     BLE_TX,
@@ -52,7 +54,9 @@ typedef struct {
 } ble_msg_t;
 
 typedef enum {
-    UPDATE_SYSTEM_TIME
+    UPDATE_SYSTEM_TIME,
+    UPDATE_SYSTEM_WEATHER,
+    APP_REQUEST,
 } ble_req_type_t;
 
 

@@ -41,7 +41,7 @@ void wf1_draw(lv_obj_t* root) {
 
 void wf1_update(event_t *event) {
     switch(event->ev) {
-        case TICK_UPDATE :
+        case EVENT_TICK_UPDATE :
             LOG_INF("Got tick");
     }
 }

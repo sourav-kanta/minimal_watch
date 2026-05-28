@@ -42,4 +42,9 @@ typedef enum DISPLAY_STATE {
     ON
 } display_state_t;
 
+typedef struct {
+    date_time_t time;
+    hourly_weather_t weather;
+} wf_update_payload_t;
+
 #endif

@@ -2,9 +2,8 @@
 #define EVENTS_H
 
 typedef enum {
-    TICK_UPDATE,
-    BLE,
-    SENSOR_DATA
+    EVENT_TICK_UPDATE,
+    EVENT_WORK_TICK,
 } event_id_t;
 
 typedef struct {

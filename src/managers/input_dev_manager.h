@@ -13,6 +13,6 @@
 #include "lvgl.h"
 
 void setup_keyboard();
-void global_input_filter_cb(lv_event_t*);
+lv_group_t* get_current_group();
 
 #endif 

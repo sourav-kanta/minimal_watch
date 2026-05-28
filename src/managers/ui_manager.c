@@ -57,8 +57,9 @@ void turn_off_Ui(const struct device* display_dev) {
  */
 void forward_wf_event(event_t *event) {
     switch(event->ev) {
-        case TICK_UPDATE:
+        case EVENT_TICK_UPDATE:
             if(selected_wf != NULL) {
+                LOG_INF("1s tick");
                 selected_wf->update_watchface(event);
             }
             break;
@@ -164,7 +165,7 @@ void handle_root_scr_actions(lv_event_t *ev) {
     if(code == LV_EVENT_KEY) {
         key = lv_event_get_key(ev);
     // Skip the fake key 0 SDL sends  
-#ifdef ARCH_POSIX
+#ifdef CONFIG_ARCH_POSIX
         if(key == 0) return;
 #endif
     }
@@ -236,7 +237,7 @@ void init_ui() {
     display_dev = DEVICE_DT_GET(
             DT_CHOSEN(zephyr_display));
     __ASSERT_NO_MSG(device_is_ready(display_dev));
-    
+    lv_display_set_antialiasing(lv_display_get_default(), false);    
     LOG_INF("Device driver is setup up");
     
     turn_on_Ui(display_dev);
@@ -253,7 +254,7 @@ void init_ui() {
     lv_obj_t * tab_bar = lv_tabview_get_tab_bar(home_tab);
     lv_obj_remove_flag(tab_bar, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_remove_flag(tab_bar, LV_OBJ_FLAG_CLICK_FOCUSABLE);
-    // Make the table view respond to keys
+    //Make the table view respond to keys
     lv_obj_t* tabview_content = lv_tabview_get_content(home_tab);
     lv_obj_add_flag(tabview_content, LV_OBJ_FLAG_EVENT_BUBBLE);
     lv_obj_remove_flag(tabview_content, LV_OBJ_FLAG_SCROLLABLE);
@@ -264,7 +265,6 @@ void init_ui() {
     remove_shadow_and_outline(app_page);
     notify_page = lv_tabview_add_tab(home_tab, "Notifications");
     remove_shadow_and_outline(notify_page);
-    // Add gesture control to switch pages
     lv_obj_add_event_cb(tabview_content, 
                         handle_root_scr_actions,
                         LV_EVENT_GESTURE,
@@ -311,6 +311,10 @@ void deinit_ui() {
  */
 ui_state_t get_current_ui_state() {
     return curr_watch_state;
+}
+
+display_state_t get_current_display_state() {
+    return dState;
 }
 
 /**

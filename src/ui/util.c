@@ -1,4 +1,8 @@
 #include <lvgl.h>
+#include "managers/input_dev_manager.h"
+#include <zephyr/logging/log.h>
+
+LOG_MODULE_REGISTER(UI_UTILS, LOG_LEVEL_INF);
 
 /**
  * @brief Finds first child of a lv_obj by BFS that has been added to the navigation
@@ -10,12 +14,17 @@
  */
 lv_obj_t* find_first_focusable_bfs(lv_obj_t* root) {
     if (!root) return NULL;
-
+    
+    if (!get_current_group()) {
+        LOG_ERR("Encoder group not setup");
+        return NULL;
+    }
+    
     // Level 1: Check all immediate children first (Breadth)
     uint32_t cnt = lv_obj_get_child_cnt(root);
     for (uint32_t i = 0; i < cnt; i++) {
         lv_obj_t* child = lv_obj_get_child(root, i);
-        if (lv_obj_get_group(child) == lv_group_get_default()) {
+        if (lv_obj_get_group(child) == get_current_group()) {
             return child; // Found at the closest level
         }
     }
@@ -45,7 +54,11 @@ void remove_shadow_and_outline(lv_obj_t* obj) {
 }
 
 void make_obj_navigable(lv_obj_t* obj) {
-    lv_group_add_obj(lv_group_get_default(), obj);
+    if(get_current_group() == NULL) {
+        LOG_ERR("Encoder group not added");
+        return;
+    }
+    lv_group_add_obj(get_current_group(), obj);
     lv_obj_add_flag(obj, LV_OBJ_FLAG_EVENT_BUBBLE);
 }
 

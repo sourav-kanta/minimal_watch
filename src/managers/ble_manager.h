@@ -5,7 +5,7 @@
 #include "ble_types.h"
 
 void init_ble();
-bool add_ble_msg_to_queue(const ble_msg_t*, const ble_comm_type_t);
+bool submit_ble_request(const ble_req_t*, const uint8_t);
 void populate_tx_buffers();
 void process_rx_buffers();
 

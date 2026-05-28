@@ -4,6 +4,12 @@
 #include <lvgl.h>
 #include "event_types.h"
 
+#define MAX_WATCHFACES 10
+#define WATCHFACE_PRIORITY 10
+#define MAX_APPS 15
+
+
+static const uint8_t APP_PRIORITY = 11;
 static const uint32_t MAX_USER_INPUT_TIMEOUT = 5000;
 
 /**
@@ -11,8 +17,7 @@ static const uint32_t MAX_USER_INPUT_TIMEOUT = 5000;
  */
 typedef enum {
     WF_1S_TIMER,
-    BLE_ANCHOR_START,
-    WORK_END_DEADLINE
+    WORK_WINDOW_START
 } mw_timer_t;
 
 
@@ -22,17 +27,37 @@ typedef enum {
 typedef struct {
     uint8_t day;
     uint8_t month;
-    uint8_t year;
+    uint16_t year;
     uint8_t hr;
     uint8_t min;
     uint8_t sec;
+    uint8_t d_week;
 } date_time_t;
-
 
 typedef struct {
     uint32_t last_sync_time;
-    uint32_t time_sync_cpu_cycles;
-} mw_state_t;
+    uint32_t time_sync_uptime;
+    uint8_t valid;
+} time_sync_t;
+
+
+typedef struct {
+    int16_t temperature; // Scaled by 10      
+    uint8_t humidity;          
+    uint8_t precip_prob;       
+    uint8_t weather_code;      
+    uint8_t wind_speed;        
+} hourly_weather_t;
+
+typedef struct {
+    uint32_t expires_at;                 
+    hourly_weather_t hourly_today[24];   
+} weather_sync_t;
+
+typedef struct {
+    time_sync_t time_state;
+    weather_sync_t weather_state;
+} watch_state_t;
 
 typedef struct {
     uint8_t app_id;
@@ -42,11 +67,8 @@ typedef struct {
     void (*draw_app) (lv_obj_t *);
     void (*close_app) ();
     void (*refresh_app) ();
-    void (*handle_event) ();
+    void (*handle_event) (event_t*);
 } application_t;
-
-static const uint8_t APP_PRIORITY = 80;
-#define MAX_APPS 15
 
 /**
  * @brief Watchface data structure
@@ -58,7 +80,7 @@ typedef struct {
     /**
      * @brief Name of watchface
      */
-    char *name;
+    const char *name;
     /**
      * @brief function pointer to draw wf
      *
@@ -78,8 +100,5 @@ typedef struct {
      */
     void (*del_watchface) (lv_obj_t*); 
 } watchface_t;
-
-#define MAX_WATCHFACES 10
-#define WATCHFACE_PRIORITY 10
 
 #endif

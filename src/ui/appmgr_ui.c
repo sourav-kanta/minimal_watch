@@ -142,8 +142,6 @@ void draw_app_manager_ui(lv_obj_t* root, application_t** apps, uint8_t num_apps)
     lv_obj_add_flag(app_root_cont, LV_OBJ_FLAG_EVENT_BUBBLE);
     lv_obj_set_size(app_root_cont, 128, 160);
     lv_obj_set_style_bg_color(app_root_cont, c_grad_top, 0);
-    lv_obj_set_style_bg_grad_color(app_root_cont, c_grad_bot, 0);
-    lv_obj_set_style_bg_grad_dir(app_root_cont, LV_GRAD_DIR_VER, 0);
     lv_obj_set_style_bg_opa(app_root_cont, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(app_root_cont, 0, 0);
     lv_obj_set_style_pad_all(app_root_cont, 0, 0);

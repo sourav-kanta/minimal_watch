@@ -3,3 +3,4 @@ message(STATUS app_sources : ${app_sources})
 target_sources(app PRIVATE ${app_sources})
 
 add_subdirectory(settings)
+add_subdirectory(weather)

@@ -11,6 +11,9 @@ add_subdirectory(src/ui)
 add_subdirectory(src/applications)
 add_subdirectory(src/managers)
 add_subdirectory(src/threads)
+add_subdirectory(src/HAL)
+add_subdirectory(src/BLE)
+add_subdirectory(src/runtime_management)
 
 target_sources(app PRIVATE ${root_sources})
 

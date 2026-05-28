@@ -4,7 +4,7 @@
 #include "threads/lvgl_thread.h"
 #include "managers/ui_manager.h"
 
-#define LVGL_THREAD_STACK_SIZE 4096
+#define LVGL_THREAD_STACK_SIZE 8192
 #define LVGL_THREAD_PRIORITY 10
 
 LOG_MODULE_REGISTER(lvgl_thread, LOG_LEVEL_INF);
@@ -65,15 +65,15 @@ void lvgl_thread(void *dummy1, void *dummy2, void *dummy3)
         uint32_t lvgl_next_refresh_interval = lv_timer_handler();
         uint32_t idle_time = 
             lv_display_get_inactive_time(NULL);
-        if(idle_time > MAX_USER_INPUT_TIMEOUT) {
-            atomic_set(&lvgl_run_flag, 0);
-            // Enter background mode 
-            deinit_ui();
-            break;
-        }
+        //if(idle_time > MAX_USER_INPUT_TIMEOUT) {
+        //    atomic_set(&lvgl_run_flag, 0);
+        //    // Enter background mode 
+        //    deinit_ui();
+        //    break;
+        //}
         // Sleep for a short period
-        k_msleep(lvgl_next_refresh_interval);
-
+        //k_msleep(lvgl_next_refresh_interval);
+        k_sleep(K_MSEC(30));
     }
 }
 
@@ -94,7 +94,7 @@ void init_lvgl_thread() {
 }
 
 void stop_lvgl_thread() {
-    // atomic_set(&lvgl_run_flag, 0);
+    atomic_set(&lvgl_run_flag, 0);
     k_msleep(50);
     lvgl_tid = NULL;
 }

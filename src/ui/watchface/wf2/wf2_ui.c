@@ -2,7 +2,8 @@
 #include <zephyr/init.h>
 #include <zephyr/logging/log.h>
 #include "ui/watchface/wf_picker.h"
-#include "common_types.h"
+#include "ui_types.h"
+#include "assets/back_image.h"
 
 LOG_MODULE_REGISTER(wf2, LOG_LEVEL_INF);
 
@@ -11,23 +12,34 @@ static watchface_t wf2;
 static lv_obj_t *lbl_batt, *lbl_day, *lbl_temp, *lbl_kcal, *lbl_steps,
          *lbl_date_num, *lbl_month, *lbl_time;
 
-static bool odd_tick=true;
+static const char month[12][13] = {"JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY",
+                                   "JUNE", "JULY", "SEPTEMBER", "OCTOBER", "NOVEMBER",
+                                   "DECEMBER"}; 
+
+static const char day[7][10] = { "SUNDAY", " MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY",
+                                 "FRIDAY", "SATURDAY"};
 
 void wf2_draw(lv_obj_t* root) {
-    // --- TACTICAL GREEN PALETTE ---
-    lv_color_t c_grad_top = lv_color_hex(0x244230); // Medium Moss
-    lv_color_t c_grad_bot = lv_color_hex(0x0F1B15); // Black-Green
     lv_color_t c_panel    = lv_color_hex(0x1B3125); // Dark Moss
     lv_color_t c_accent   = lv_color_hex(0x2ECC71); // Tactical Green
     lv_color_t c_white    = lv_color_hex(0xFFFFFF);
 
-    // Lock screen to prevent scrolling
+    // Prevent screen scrolling
     lv_obj_clear_flag(root, LV_OBJ_FLAG_SCROLLABLE);
 
-    lv_obj_set_style_bg_color(root, c_grad_top, 0);
-    lv_obj_set_style_bg_grad_color(root, c_grad_bot, 0);
-    lv_obj_set_style_bg_grad_dir(root, LV_GRAD_DIR_VER, 0);
-    lv_obj_set_style_bg_opa(root, LV_OPA_COVER, 0);
+    // --- ULTRA-LIGHT BACKGROUND IMAGE ---
+    // Instead of creating a heavy generic container, we create the image 
+    // directly on root and strip its layout features to save critical heap.
+    lv_obj_t *bg_img = lv_image_create(root);
+    lv_image_set_src(bg_img, &back_image);
+    lv_obj_center(bg_img);
+    
+    // Disable hits/clicks on the image so LVGL doesn't track it in memory searches
+    lv_obj_add_flag(bg_img, LV_OBJ_FLAG_IGNORE_LAYOUT);
+    lv_obj_remove_flag(bg_img, LV_OBJ_FLAG_CLICKABLE);
+
+    // Push the image to the absolute back of the render stack immediately
+    lv_obj_move_background(bg_img);
 
     // --- TOP SECTION ---
     lbl_temp = lv_label_create(root);
@@ -38,7 +50,7 @@ void wf2_draw(lv_obj_t* root) {
 
     lbl_time = lv_label_create(root);
     lv_label_set_text(lbl_time, "10:08");
-    lv_obj_set_style_text_font(lbl_time, &lv_font_montserrat_24, 0); 
+    lv_obj_set_style_text_font(lbl_time, &lv_font_montserrat_14, 0); 
     lv_obj_set_style_text_color(lbl_time, c_white, 0);
     lv_obj_align(lbl_time, LV_ALIGN_TOP_RIGHT, -10, 8);
 
@@ -61,7 +73,7 @@ void wf2_draw(lv_obj_t* root) {
     lv_obj_set_style_text_color(lbl_month, c_white, 0);
     lv_obj_align(lbl_month, LV_ALIGN_TOP_RIGHT, -10, 44);
 
-    // --- ACTIVITY PANEL (Reference for Battery) ---
+    // --- ACTIVITY PANEL ---
     lv_obj_t * panel = lv_obj_create(root);
     lv_obj_set_size(panel, 118, 52); 
     lv_obj_align(panel, LV_ALIGN_BOTTOM_MID, 0, -8);
@@ -73,7 +85,6 @@ void wf2_draw(lv_obj_t* root) {
     lv_obj_set_flex_flow(panel, LV_FLEX_FLOW_COLUMN);
     lv_obj_clear_flag(panel, LV_OBJ_FLAG_SCROLLABLE);
 
-    // Steps Row
     lbl_steps = lv_label_create(panel);
     lv_label_set_text(lbl_steps, "STEPS 7645");
     lv_obj_set_style_text_font(lbl_steps, &lv_font_montserrat_10, 0);
@@ -85,7 +96,6 @@ void wf2_draw(lv_obj_t* root) {
     lv_obj_set_style_bg_color(bar_steps, c_accent, LV_PART_INDICATOR);
     lv_obj_set_style_bg_color(bar_steps, lv_color_hex(0x2A2E35), LV_PART_MAIN);
 
-    // Kcal Row
     lbl_kcal = lv_label_create(panel);
     lv_label_set_text(lbl_kcal, "KCAL 328");
     lv_obj_set_style_text_font(lbl_kcal, &lv_font_montserrat_10, 0);
@@ -97,7 +107,7 @@ void wf2_draw(lv_obj_t* root) {
     lv_obj_set_style_bg_color(bar_kcal, c_accent, LV_PART_INDICATOR);
     lv_obj_set_style_bg_color(bar_kcal, lv_color_hex(0x2A2E35), LV_PART_MAIN);
 
-    // --- BATTERY ARC (Aligned ABOVE Panel) ---
+    // --- BATTERY ARC ---
     lv_obj_t * arc = lv_arc_create(root);
     lv_obj_set_size(arc, 34, 34); 
     lv_arc_set_rotation(arc, 270);
@@ -109,29 +119,51 @@ void wf2_draw(lv_obj_t* root) {
     lv_obj_set_style_arc_color(arc, lv_color_hex(0x2A2E35), LV_PART_MAIN);
     lv_obj_set_style_arc_color(arc, c_accent, LV_PART_INDICATOR);
     
-    // Aligns the arc to the TOP-LEFT of the activity box with 4px vertical padding
     lv_obj_align_to(arc, panel, LV_ALIGN_OUT_TOP_LEFT, 5, -4);
 
     lbl_batt = lv_label_create(root); 
     lv_label_set_text(lbl_batt, "75");
-    lv_obj_set_style_text_font(lbl_batt, &lv_font_montserrat_10, 0); // Using 10
+    lv_obj_set_style_text_font(lbl_batt, &lv_font_montserrat_10, 0); 
     lv_obj_set_style_text_color(lbl_batt, c_white, 0);
     lv_obj_align_to(lbl_batt, arc, LV_ALIGN_CENTER, 0, 0);
 }
 
 void wf2_update(event_t *event) {
-    LOG_INF("1s ticks received");
-    if(event->ev == TICK_UPDATE) {
-        odd_tick = odd_tick == true ? false : true;
-        if(odd_tick)
-           lv_label_set_text(lbl_time, "10 08");
-        else
-           lv_label_set_text(lbl_time, "10:08"); 
+    if (event == NULL || event->data == NULL) {
+        return;
+    }
+
+    if(event->ev == EVENT_TICK_UPDATE) {
+        char time[16];
+        char date[4];
+        char temp[8];
+        
+        wf_update_payload_t* update_data = event->data;
+        date_time_t* date_time = &update_data->time;
+        hourly_weather_t* weather = &update_data->weather;
+
+        uint8_t m_idx = (date_time->month > 0) ? (date_time->month - 1) : 0;
+        if (m_idx >= 12) m_idx = 0;
+
+        uint8_t d_idx = date_time->d_week;
+        if (d_idx >= 7) d_idx = 0;
+
+        snprintf(time, sizeof(time), "%02u:%02u:%02u", date_time->hr, 
+                  date_time->min, date_time->sec);
+        snprintf(date, sizeof(date), "%02u", date_time->day);
+        snprintf(temp, sizeof(temp), "%2dC",  weather->temperature/10);
+        
+        if (lbl_time) lv_label_set_text(lbl_time, time);
+        if (lbl_date_num) lv_label_set_text(lbl_date_num, date);
+        if (lbl_month) lv_label_set_text(lbl_month, month[m_idx]);
+        if (lbl_day) lv_label_set_text(lbl_day, day[d_idx]);
+        if (lbl_temp) lv_label_set_text(lbl_temp, temp);
     }
 }
 
 void wf2_del_wf(lv_obj_t* root) {
-
+    lbl_batt = lbl_day = lbl_temp = lbl_kcal = lbl_steps = NULL;
+    lbl_date_num = lbl_month = lbl_time = NULL;
 }
 
 static watchface_t wf2 = {
@@ -146,4 +178,5 @@ static int register_wf(void) {
     return 0;
 }
 
-SYS_INIT(register_wf, APPLICATION, WATCHFACE_PRIORITY); 
+// Changed initialization priority to APPLICATION to run *after* system core stacks complete
+SYS_INIT(register_wf, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
