@@ -22,7 +22,7 @@ typedef uint8_t ble_opcode_t;
 
 #define BLE_OP_TIME_UPDATE ((ble_opcode_t)0x01)
 #define BLE_OP_WEATHER_UPDATE ((ble_opcode_t)0x02)
-#define BLE_OP_APP_REQUEST ((ble_opcode_t)0x03)
+#define BLE_OP_DATED_WEATHER_QUERY ((ble_opcode_t)0x03)
 
 typedef enum {
     BLE_TX,
@@ -56,7 +56,7 @@ typedef struct {
 typedef enum {
     UPDATE_SYSTEM_TIME,
     UPDATE_SYSTEM_WEATHER,
-    APP_REQUEST,
+    DATED_WEATHER_QUERY,
 } ble_req_type_t;
 
 

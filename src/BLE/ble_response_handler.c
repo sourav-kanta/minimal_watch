@@ -2,6 +2,7 @@
 #include <zephyr/logging/log.h>
 #include "ble_types.h"
 #include "managers/persistance_manager.h"
+#include "managers/event_manager.h"
 
 LOG_MODULE_REGISTER(BLE_RESPONSE_HANDLER, LOG_LEVEL_INF);
 
@@ -37,11 +38,10 @@ LOG_MODULE_REGISTER(BLE_RESPONSE_HANDLER, LOG_LEVEL_INF);
  * ====================================================================================
  * @endverbatim
  */
-static void parse_weather_payload(const uint8_t *payload) {
+static void parse_weather_payload(const uint8_t *payload, weather_sync_t* weather_state) {
     uint16_t idx = 0;
-    weather_sync_t weather_state;
 
-    weather_state.expires_at = ((uint32_t)payload[idx]     << 24) |
+    weather_state->expires_at = ((uint32_t)payload[idx]     << 24) |
                                 ((uint32_t)payload[idx + 1] << 16) |
                                 ((uint32_t)payload[idx + 2] << 8)  |
                                 ((uint32_t)payload[idx + 3] << 0);
@@ -49,22 +49,21 @@ static void parse_weather_payload(const uint8_t *payload) {
     
     for (int i = 0; i < 24; i++) {
         int16_t temp = (int16_t)((payload[idx] << 8) | payload[idx + 1]);
-        weather_state.hourly_today[i].temperature = temp;
+        weather_state->hourly_today[i].temperature = temp;
         idx += 2;
 
-        weather_state.hourly_today[i].humidity     = payload[idx++];
-        weather_state.hourly_today[i].precip_prob  = payload[idx++];
-        weather_state.hourly_today[i].weather_code = payload[idx++];
-        weather_state.hourly_today[i].wind_speed   = payload[idx++];
+        weather_state->hourly_today[i].humidity     = payload[idx++];
+        weather_state->hourly_today[i].precip_prob  = payload[idx++];
+        weather_state->hourly_today[i].weather_code = payload[idx++];
+        weather_state->hourly_today[i].wind_speed   = payload[idx++];
         LOG_DBG("Hour : %02d Humidity : %02u Precipitation : %02u \
                 Weather code : %02u Wind speed %02u Temp %02d", i ,
-                weather_state.hourly_today[i].humidity,     
-                weather_state.hourly_today[i].precip_prob,  
-                weather_state.hourly_today[i].weather_code, 
-                weather_state.hourly_today[i].wind_speed,
-                weather_state.hourly_today[i].temperature);   
+                weather_state->hourly_today[i].humidity,     
+                weather_state->hourly_today[i].precip_prob,  
+                weather_state->hourly_today[i].weather_code, 
+                weather_state->hourly_today[i].wind_speed,
+                weather_state->hourly_today[i].temperature);   
     }
-    update_persistant_weather_state(&weather_state);
 }
 
 static void parse_date_time_payload(const uint8_t* payload) {
@@ -78,7 +77,7 @@ static void parse_date_time_payload(const uint8_t* payload) {
 void handle_ble_response(const ble_msg_t* msg) {
     switch(msg->hdr.opcode) {
         case BLE_OP_TIME_UPDATE :
-            if(msg->hdr.len >= 4) {
+            if(msg->hdr.len == 4) {
                 parse_date_time_payload(msg->payload);
             }
             else {
@@ -86,17 +85,34 @@ void handle_ble_response(const ble_msg_t* msg) {
             }
             break;
         case BLE_OP_WEATHER_UPDATE :
-            if(msg->hdr.len >=148) {
-                parse_weather_payload(msg->payload);
+            if(msg->hdr.len ==148) {
+                weather_sync_t weather_state;
+                parse_weather_payload(msg->payload, &weather_state);
+                update_persistant_weather_state(&weather_state);
             }
             else {
                 LOG_ERR("Invalid weather message");
             }
             break;
-        case BLE_OP_APP_REQUEST :
-
-            break;
-            
+        case BLE_OP_DATED_WEATHER_QUERY :
+            if(msg->hdr.len ==148) {
+                weather_sync_t weather_state;
+                parse_weather_payload(msg->payload, &weather_state);
+                app_update_t update = {
+                    .req = DATED_WEATHER_REQUEST,
+                    .req_app = msg->hdr.req_app,
+                };
+                memcpy(update.data, weather_state.hourly_today, sizeof(hourly_weather_t)*24);
+                event_t event = {
+                    .payload_len = sizeof(update),
+                    .data = &update,
+                    .ev = EVENT_APP_WORK_SCHEDULE 
+                };
+                handle_event(&event);
+            }
+            else {
+                LOG_ERR("Invalid weather message");
+            }
     }
 }
 

@@ -2,6 +2,8 @@
 #include "managers/ui_manager.h"
 #include "ui/appmgr_ui.h"
 #include <managers/app_manager.h>
+#include "ui/util.h"
+#include "managers/input_dev_manager.h"
 
 LOG_MODULE_REGISTER(appmgr_ui, LOG_LEVEL_INF);
 
@@ -61,8 +63,55 @@ static void handle_app_screen_keys_cb(lv_event_t * e) {
     lv_event_code_t code = lv_event_get_code(e);
     if(code == LV_EVENT_KEY) {
         uint32_t key = lv_event_get_key(e); // Get the pressed key
+        lv_obj_t* curr_focused = lv_group_get_focused(get_current_group());
         if(key == LV_KEY_ESC) {
-            handle_app_scr_close();
+            if(!curr_focused) return;
+            if(curr_focused == app_scr) {
+                handle_app_scr_close();
+            }
+            else {
+                lv_obj_t* parent = find_first_focusable_parent_dfs(curr_focused);
+                if(parent) 
+                    lv_group_focus_obj(parent);
+                else
+                    LOG_ERR("Unknown parent to navigate to");
+            }
+        }
+        if(key == LV_KEY_ENTER) {
+            if(!curr_focused) return;
+            if(curr_focused == app_scr) {
+                lv_obj_t* child = find_first_focusable_child_dfs(app_scr);
+                if(child)
+                    lv_group_focus_obj(child);
+                else 
+                    LOG_ERR("Unknown child to navigate to");
+            }
+        }
+        if(key == LV_KEY_RIGHT) {
+            LOG_INF("Finding next sibling");
+            if(!curr_focused) return;
+            if(curr_focused == app_scr) {
+                lv_event_stop_bubbling(e); 
+                return;
+            }
+            lv_obj_t* next_sibling = find_next_focusable_sibling(curr_focused);
+            if(next_sibling)
+                lv_group_focus_obj(next_sibling);
+            else 
+                LOG_ERR("Cant find next sibling");
+        }
+        if(key == LV_KEY_LEFT) {
+            LOG_INF("Finding prev sibling");
+            if(!curr_focused) return;
+            if(curr_focused == app_scr) {
+                lv_event_stop_bubbling(e); 
+                return;
+            }
+            lv_obj_t* prev_sibling = find_prev_focusable_sibling(curr_focused);
+            if(prev_sibling)
+                lv_group_focus_obj(prev_sibling);
+            else 
+                LOG_ERR("Cant find previous sibling");
         }
     }
     lv_event_stop_bubbling(e);
@@ -123,7 +172,7 @@ static void stop_bubble_cb(lv_event_t * e) {
  */
 void draw_app_manager_ui(lv_obj_t* root, application_t** apps, uint8_t num_apps) {
     // --- REFINED TACTICAL THEME COLORS ---
-    lv_color_t c_grad_top   = lv_color_hex(0x1B3125); 
+    lv_color_t c_grad_top   = lv_color_hex(0x41704e); 
     lv_color_t c_grad_bot   = lv_color_hex(0x0A140F); 
     lv_color_t c_panel      = lv_color_hex(0x1B3125); 
     lv_color_t c_focus_bg   = lv_color_hex(0x2D523E); // Deep forest green
@@ -141,7 +190,7 @@ void draw_app_manager_ui(lv_obj_t* root, application_t** apps, uint8_t num_apps)
     remove_shadow_and_outline(app_root_cont);
     lv_obj_add_flag(app_root_cont, LV_OBJ_FLAG_EVENT_BUBBLE);
     lv_obj_set_size(app_root_cont, 128, 160);
-    lv_obj_set_style_bg_color(app_root_cont, c_grad_top, 0);
+    lv_obj_set_style_bg_color(app_root_cont, c_panel, 0);
     lv_obj_set_style_bg_opa(app_root_cont, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(app_root_cont, 0, 0);
     lv_obj_set_style_pad_all(app_root_cont, 0, 0);

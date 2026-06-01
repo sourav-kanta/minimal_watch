@@ -4,61 +4,111 @@
 
 LOG_MODULE_REGISTER(UI_UTILS, LOG_LEVEL_INF);
 
-/**
- * @brief Finds first child of a lv_obj by BFS that has been added to the navigation
- * group, this is needed as immideate child may not be the next nav stop 
- *
- * @param root lv_obj whose focusable child we want to find
- *
- * @return 
- */
-lv_obj_t* find_first_focusable_bfs(lv_obj_t* root) {
+
+lv_obj_t* find_first_focusable_child_dfs(lv_obj_t* root) {
     if (!root) return NULL;
-    
+
     if (!get_current_group()) {
         LOG_ERR("Encoder group not setup");
         return NULL;
     }
-    
-    // Level 1: Check all immediate children first (Breadth)
+
     uint32_t cnt = lv_obj_get_child_cnt(root);
+
+    // Iterate through children in their exact creation / structural index order
     for (uint32_t i = 0; i < cnt; i++) {
         lv_obj_t* child = lv_obj_get_child(root, i);
+
+        // Base Case: If this immediate child is navigable, we hit a boundary!
+        // Return it immediately without checking any of its sub-children.
         if (lv_obj_get_group(child) == get_current_group()) {
-            return child; // Found at the closest level
+            return child;
+        }
+
+        // Recursive Case: If it's not navigable (like a layout panel or spacer),
+        // we dive deep down this branch to find its first navigable node before moving to sibling 'i+1'.
+        lv_obj_t* found = find_first_focusable_child_dfs(child);
+        if (found) {
+            return found; // Found a navigable item deep in this specific branch!
         }
     }
 
-    // Level 2+: If none found, recurse into children's children
-    for (uint32_t i = 0; i < cnt; i++) {
-        lv_obj_t* found = find_first_focusable_bfs(lv_obj_get_child(root, i));
-        if (found) return found;
-    }
+    return NULL; // This entire branch tree is completely empty of navigable objects
+}
 
+lv_obj_t* find_first_focusable_parent_dfs(lv_obj_t* obj) {
+    lv_obj_t * parent = lv_obj_get_parent(obj);
+    while(parent) {
+        if(lv_obj_get_group(parent) == get_current_group()) {
+            return parent;
+        }
+        parent = lv_obj_get_parent(parent);
+    }
     return NULL;
 }
 
-/**
- * @brief Helper function that removes border, padding and outline
- *
- * @param obj
- */
-void remove_shadow_and_outline(lv_obj_t* obj) {
-    lv_obj_set_style_border_width(obj, 0, LV_PART_MAIN);
-    lv_obj_set_style_shadow_width(obj, 0,LV_PART_MAIN);
-    lv_obj_set_style_pad_row(obj, 0, LV_PART_MAIN);
-    lv_obj_set_style_pad_column(obj, 0, LV_PART_MAIN);
-    lv_obj_set_style_pad_ver(obj, 0, LV_PART_MAIN);
-    lv_obj_set_style_pad_hor(obj, 0, LV_PART_MAIN);
-    lv_obj_set_style_radius(obj, 0, 0);
+static lv_obj_t* scan_subtree_focus_sequence(lv_obj_t* root, lv_obj_t* current_focus, 
+                                            lv_obj_t** last_found_nav, 
+                                            bool* origin_node_passed,
+                                            bool is_forward_search) {
+    if (!root) return NULL;
+
+    uint32_t child_count = lv_obj_get_child_cnt(root);
+    for (uint32_t i = 0; i < child_count; i++) {
+        lv_obj_t* child = lv_obj_get_child(root, i);
+        bool is_navigable = (lv_obj_get_group(child) == get_current_group());
+
+        if (is_navigable) {
+            if (is_forward_search) {
+                if (*origin_node_passed) {
+                    return child;
+                }
+                if (child == current_focus) {
+                    *origin_node_passed = true;
+                }
+            } else {
+                if (child == current_focus) {
+                    return *last_found_nav;
+                }
+                *last_found_nav = child;
+            }
+            
+            continue; 
+        }
+
+        lv_obj_t* resolved_target = scan_subtree_focus_sequence(child, 
+                                                                current_focus,
+                                                                last_found_nav,
+                                                                origin_node_passed,
+                                                                is_forward_search);
+        if (resolved_target) {
+            return resolved_target;
+        }
+    }
+    return NULL;
 }
 
-void make_obj_navigable(lv_obj_t* obj) {
-    if(get_current_group() == NULL) {
-        LOG_ERR("Encoder group not added");
-        return;
-    }
-    lv_group_add_obj(get_current_group(), obj);
-    lv_obj_add_flag(obj, LV_OBJ_FLAG_EVENT_BUBBLE);
+lv_obj_t* find_next_focusable_sibling(lv_obj_t* obj) {
+    if (!obj) return NULL;
+
+    lv_obj_t* boundary_roof = find_first_focusable_parent_dfs(obj);
+    if (!boundary_roof) return NULL;
+
+    lv_obj_t* last_found_nav = NULL;
+    bool origin_node_passed = false;
+
+    return scan_subtree_focus_sequence(boundary_roof, obj, &last_found_nav, &origin_node_passed, true);
+}
+
+lv_obj_t* find_prev_focusable_sibling(lv_obj_t* obj) {
+    if (!obj) return NULL;
+
+    lv_obj_t* boundary_roof = find_first_focusable_parent_dfs(obj);
+    if (!boundary_roof) return NULL;
+
+    lv_obj_t* last_found_nav = NULL;
+    bool origin_node_passed = false;
+
+    return scan_subtree_focus_sequence(boundary_roof, obj, &last_found_nav, &origin_node_passed, false);
 }
 

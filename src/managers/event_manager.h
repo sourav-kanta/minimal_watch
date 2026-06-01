@@ -12,9 +12,8 @@
 #include "ble_types.h" 
 #include "event_types.h"
 
-bool request_ble_action(ble_req_t);
+bool request_ble_action(ble_req_t*);
 void handle_event(event_t*);
-void handle_ble_response(ble_msg_t*);
 void init_events();
 
 #endif

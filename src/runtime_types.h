@@ -13,6 +13,8 @@
 #define WINDOW_GRACE_PERIOD_MS    700   
 #define WINDOW_UI_MAX_MS          300   
 
+#define MAX_WORKER_ARG_PAYLOAD    512
+
 #define MAX_CURFEW_HOOKS          4
 
 typedef enum {
@@ -31,7 +33,8 @@ struct runtime_work_item {
     runtime_work_type_t type; /* EXPLICIT FIX: Structural separation of workload categories */
     int priority;           
     void (*handler)(void *arg1, atomic_t *abort_flag);    
-    void *arg1;             
+    void *arg1;  
+    uint8_t arg_payload[MAX_WORKER_ARG_PAYLOAD];    
 };
 
 typedef void (*curfew_hook_t)(void);

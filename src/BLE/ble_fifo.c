@@ -102,11 +102,12 @@ bool add_ble_msg_to_queue(const ble_msg_t *msg, const ble_comm_type_t type)
     k_spinlock_key_t key = k_spin_lock(fifo_lock);
 
     if (fifo_is_full_unsafe((*write_idx), (*read_idx))) {
-        LOG_INF("BLE FIFO full, discard oldest message");
+        // discarding oldest messages
         (*read_idx) = ((*read_idx) + 1) % BLE_FIFO_SIZE;
     }
 
-    ble_fifo[(*write_idx)] = *msg;
+    ble_fifo[(*write_idx)].hdr = msg->hdr;
+    memcpy(ble_fifo[(*write_idx)].payload, msg->payload, msg->hdr.len);
 
     (*write_idx) = ((*write_idx) + 1) % BLE_FIFO_SIZE;
 
@@ -159,7 +160,8 @@ bool get_next_ble_msg(ble_msg_t *out_msg, const ble_comm_type_t type)
         return false;
     }
 
-    *out_msg = ble_fifo[(*read_idx)];
+    out_msg->hdr = ble_fifo[(*read_idx)].hdr;
+    memcpy(out_msg->payload, ble_fifo[(*read_idx)].payload, ble_fifo[(*read_idx)].hdr.len);
 
     (*read_idx) = ((*read_idx) + 1) % BLE_FIFO_SIZE;
 

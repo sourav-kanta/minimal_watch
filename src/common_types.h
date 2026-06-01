@@ -4,6 +4,7 @@
 #include <lvgl.h>
 #include "event_types.h"
 
+#define MAX_APP_RESPONSE_SIZE 256
 #define MAX_WATCHFACES 10
 #define WATCHFACE_PRIORITY 10
 #define MAX_APPS 15
@@ -20,6 +21,15 @@ typedef enum {
     WORK_WINDOW_START
 } mw_timer_t;
 
+typedef enum {
+    DATED_WEATHER_REQUEST
+} app_ble_req_t;
+
+typedef struct {
+    app_ble_req_t req;
+    uint8_t req_app;
+    uint8_t data[MAX_APP_RESPONSE_SIZE];
+} app_update_t;
 
 /**
  * @brief Type to store date related info
@@ -67,7 +77,7 @@ typedef struct {
     void (*draw_app) (lv_obj_t *);
     void (*close_app) ();
     void (*refresh_app) ();
-    void (*handle_event) (event_t*);
+    void (*handle_event) (app_update_t*);
 } application_t;
 
 /**

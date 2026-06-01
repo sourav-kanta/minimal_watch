@@ -172,7 +172,7 @@ bool submit_ble_request(const ble_req_t* msg, const uint8_t app_id) {
         return false;
     }
     else 
-        return handle_ble_request(*msg, app_id);
+        return handle_ble_request(msg, app_id);
 }
 
 static void connected(struct bt_conn *conn, uint8_t err) {

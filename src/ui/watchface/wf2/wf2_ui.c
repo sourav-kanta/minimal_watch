@@ -24,21 +24,15 @@ void wf2_draw(lv_obj_t* root) {
     lv_color_t c_accent   = lv_color_hex(0x2ECC71); // Tactical Green
     lv_color_t c_white    = lv_color_hex(0xFFFFFF);
 
-    // Prevent screen scrolling
     lv_obj_clear_flag(root, LV_OBJ_FLAG_SCROLLABLE);
 
-    // --- ULTRA-LIGHT BACKGROUND IMAGE ---
-    // Instead of creating a heavy generic container, we create the image 
-    // directly on root and strip its layout features to save critical heap.
     lv_obj_t *bg_img = lv_image_create(root);
     lv_image_set_src(bg_img, &back_image);
     lv_obj_center(bg_img);
     
-    // Disable hits/clicks on the image so LVGL doesn't track it in memory searches
     lv_obj_add_flag(bg_img, LV_OBJ_FLAG_IGNORE_LAYOUT);
     lv_obj_remove_flag(bg_img, LV_OBJ_FLAG_CLICKABLE);
 
-    // Push the image to the absolute back of the render stack immediately
     lv_obj_move_background(bg_img);
 
     // --- TOP SECTION ---

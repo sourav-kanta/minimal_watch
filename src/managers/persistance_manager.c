@@ -16,10 +16,10 @@ time_sync_t get_curr_time_state() {
     return watch_state->time_state;
 }
 
-weather_sync_t get_curr_weather_state() {
+const weather_sync_t* get_curr_weather_state() {
     if(watch_state == NULL) 
         LOG_ERR("Timestate not initialized. Hardware probably unrecognized");
-    return watch_state->weather_state;
+    return &watch_state->weather_state;
 }
 
 void update_persistant_time_state(uint32_t epoch) {
@@ -35,3 +35,4 @@ void update_persistant_weather_state(const weather_sync_t* weather) {
     }
     memcpy(&watch_state->weather_state, weather, sizeof(weather_sync_t));
 }
+

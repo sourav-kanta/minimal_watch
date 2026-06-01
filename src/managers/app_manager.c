@@ -1,6 +1,7 @@
 #include <zephyr/init.h>
 #include <zephyr/logging/log.h>
 #include "ui/appmgr_ui.h"
+#include "common_utils.h"
 
 LOG_MODULE_REGISTER(app_manager, LOG_LEVEL_INF);
 
@@ -79,5 +80,20 @@ bool check_if_app_running() {
  */
 application_t* get_curr_app() {
     return curr_app;
+}
+
+void send_app_update(app_update_t *update, atomic_t* abort) {
+    if(generate_curr_app_id() != update->req_app) {
+        LOG_ERR("App no longer in focus. Discarding response");
+        return;
+    }
+
+    if(!curr_app) {
+        LOG_ERR("No application currently active.");
+        return;
+    }
+
+    if(curr_app->handle_event)
+        (*curr_app->handle_event)(update);
 }
 

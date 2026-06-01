@@ -65,14 +65,23 @@ static void input_cb(struct input_event *evt, void *user_data)
     }
 #endif 
 
-    if(evt->type == INPUT_EV_KEY &&
-       evt->code == INPUT_KEY_ENTER)
+    if(evt->type == INPUT_EV_KEY)
     {
         if(evt->value) {
-            pending_key = LV_KEY_ENTER;
-            key_pending = true;
+            switch(evt->code) {
+                case INPUT_KEY_ENTER :
+                    pending_key = LV_KEY_ENTER;
+                    key_pending = true;
 
-            LOG_INF("LV_KEY_ENTER");
+                    LOG_INF("LV_KEY_ENTER");
+                    break;
+                case INPUT_KEY_BACK :
+                    pending_key = LV_KEY_ESC;
+                    key_pending = true;
+
+                    LOG_INF("LV_KEY_BACK");
+                    break;
+            }
         }
     }
 }

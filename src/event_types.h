@@ -4,6 +4,7 @@
 typedef enum {
     EVENT_TICK_UPDATE,
     EVENT_WORK_TICK,
+    EVENT_APP_WORK_SCHEDULE
 } event_id_t;
 
 typedef struct {

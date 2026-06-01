@@ -102,11 +102,11 @@ void close_curr_page() {
 void show_page(ui_state_t page) {
     switch(page) {
         case WATCHFACE :
-            start_specific_timer(WF_1S_TIMER);
             selected_wf = select_wf();
             LOG_INF("Selected watchface : %s",
                     selected_wf->name);
             selected_wf->draw_watchface(wf_page);
+            start_specific_timer(WF_1S_TIMER);
             break;
         case APP :
             show_app_picker_ui(app_page);
@@ -189,30 +189,29 @@ void handle_root_scr_actions(lv_event_t *ev) {
         lv_indev_wait_release(inp_dev);
         lv_obj_t * focused = lv_group_get_focused(lv_group_get_default());
         if(focused == NULL) return;
-        lv_obj_t* target = find_first_focusable_bfs(focused);
+        lv_obj_t* target = find_first_focusable_child_dfs(focused);
         if(target) {
             LOG_INF("BFS found nearest focusable child");
             lv_group_focus_obj(target);
             return;
         }
+        else 
+            LOG_ERR("Unknown child to navigate to");
 
     }
     // DFS backwards to get navigable parent
     if(key == LV_KEY_ESC) {
         LOG_INF("Back button");
+        lv_indev_wait_release(inp_dev);
         lv_obj_t * focused = lv_group_get_focused(lv_group_get_default());
         if(focused == NULL) return;
-        lv_obj_t * parent = lv_obj_get_parent(focused);
-        while(parent) {
-            if(lv_obj_get_group(parent) == lv_group_get_default()) {
-                lv_group_focus_obj(parent);
-                // Stop LVGL from processing this key further
-                lv_indev_wait_release(inp_dev);
-                lv_event_stop_bubbling(ev);
-                return;
-            }
-            parent = lv_obj_get_parent(parent);
-        }
+        lv_event_stop_bubbling(ev);
+        lv_obj_t* parent = find_first_focusable_parent_dfs(focused);
+        if(parent) 
+            lv_group_focus_obj(parent);
+        else 
+            LOG_ERR("Unknown parent to navigate to");
+
     }
     lv_indev_wait_release(inp_dev);
 }
