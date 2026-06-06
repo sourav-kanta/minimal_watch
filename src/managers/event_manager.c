@@ -12,6 +12,7 @@
 #include "managers/ui_manager.h"
 #include "managers/runtime_manager.h"
 #include "managers/app_manager.h"
+#include "managers/notification_manager.h"
 
 #include "event_types.h"
 #include "common_types.h"
@@ -76,6 +77,11 @@ void handle_event(event_t* event) {
             if(add_user_work(&app_work) != 0) {
                 LOG_ERR("Unable to add user work");
             }
+            break;
+        }
+        case EVENT_NOTIFICATION_RECEIVED : {
+            receive_notification((notification_t*)event->data);
+            update_notification_ui();     
             break;
         }
         default :

@@ -6,6 +6,21 @@
         zephyr,display = &sdl_display;
     };
 
+    fstab {
+        compatible = "zephyr,fstab";
+        lfs1: lfs1 {
+            compatible = "zephyr,fstab,littlefs";
+            mount-point = "/lfs";
+            partition = <&storage_partition>;
+            automount;
+            read-size = <16>;
+            prog-size = <16>;
+            cache-size = <64>;
+            lookahead-size = <32>;
+            block-cycles = <512>;
+        };
+    };
+
     sdl_display: sdl_display {
         compatible = "zephyr,sdl-dc";
         width = <128>;
@@ -43,13 +58,18 @@
         key_ok: key_ok {
             gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;
             label = "Ok";
-            zephyr,code = <INPUT_KEY_ENTER>;
+            zephyr,code = <INPUT_KEY_4>;
         };
-        key_back: key_back {
-            gpios = <&gpio0 7  GPIO_ACTIVE_HIGH>;
-            label = "back";
-            zephyr,code = <INPUT_KEY_BACK>;
-        };
+    };
+
+    
+    key_back: key_back {
+        compatible = "zephyr,input-longpress";
+        input = <&gpio_pins>;
+        input-codes = <INPUT_KEY_4>; 
+        short-codes = <INPUT_KEY_ENTER>;
+        long-codes = <INPUT_KEY_ESC>;
+        long-delay-ms = <500>;
     };
     
     switches: switches {
@@ -97,8 +117,8 @@
         };
 
         storage_partition: partition@3EC000 {
-            label = "storage";
-            reg = <0x003EC000 DT_SIZE_K(32)>;
+            label = "storage_partition";
+            reg = <0x003EC000 DT_SIZE_K(512)>;
         };
     };
 };

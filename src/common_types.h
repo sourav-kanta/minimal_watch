@@ -22,6 +22,24 @@ typedef enum {
 } mw_timer_t;
 
 typedef enum {
+    WHATSAPP,
+    MESSAGE,
+    NAVIGATION,
+    CALL,
+    UNKNOWN
+} phone_app_t;
+
+typedef struct {
+    phone_app_t app;
+    char app_name[14];
+    char body[100];
+    char action_name[15];
+    char dismiss_text[15];
+    void (*action_handler)();
+    void (*dismiss_handler)(unsigned int);
+} notification_t;
+
+typedef enum {
     DATED_WEATHER_REQUEST
 } app_ble_req_t;
 

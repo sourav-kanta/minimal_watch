@@ -15,12 +15,12 @@ typedef enum UI_STATE {
     /**
      * @brief Watchface UI
      */
+    NOTIFY,
     WATCHFACE,
     /**
      * @brief Application page
      */
     APP,
-    NOTIFY,
     /**
      * @brief Keep track of end of pages
      */

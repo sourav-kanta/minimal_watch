@@ -1,6 +1,6 @@
 #include <zephyr/init.h>
 #include <zephyr/logging/log.h>
-#include "ui/appmgr_ui.h"
+#include "ui/appmgr_ui/appmgr_ui.h"
 #include "common_utils.h"
 
 LOG_MODULE_REGISTER(app_manager, LOG_LEVEL_INF);
@@ -27,6 +27,10 @@ void add_app(application_t* app) {
  */
 void open_app(lv_event_t* ev) {
     lv_event_stop_bubbling(ev);
+    if(lv_event_get_key(ev) != LV_KEY_ENTER) {
+        LOG_INF("Unknown key");
+        return;
+    }
     application_t* app = 
         (application_t*) lv_event_get_user_data(ev);
     LOG_INF("Opening app %s", app->name);

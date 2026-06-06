@@ -13,7 +13,7 @@
 #define WINDOW_GRACE_PERIOD_MS    700   
 #define WINDOW_UI_MAX_MS          300   
 
-#define MAX_WORKER_ARG_PAYLOAD    512
+#define MAX_WORKER_ARG_PAYLOAD    264
 
 #define MAX_CURFEW_HOOKS          4
 

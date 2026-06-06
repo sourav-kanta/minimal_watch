@@ -6,6 +6,7 @@
 #include "managers/app_manager.h"
 #include "common_types.h"
 #include "common_utils.h"
+#include "ui/ui_theme.h"
 
 #include "assets/weather_bg.h"
 #include "assets/cloudy.h"
@@ -17,10 +18,22 @@ LOG_MODULE_REGISTER(WEATHER_APP, LOG_LEVEL_INF);
 
 #define TOTAL_HOURS 24
 
+static const char HEX_COLOR_TEXT_PRIMARY[]         = "#28799c";
+static const char HEX_COLOR_TEXT_PRIMARY_LIGHT[]   = "#e3e2e6";
+static const char HEX_COLOR_TEXT_SECONDARY[]       = "#4f8ee0";
+static const char HEX_COLOR_TEXT_TERTIARY[]        = "#38bf36";
+static const char HEX_COLOR_TEXT_TERTIARY_LIGHT[]  = "#85f29f";
+static const char HEX_COLOR_FOCUS_BG[]             = "#f02939";
+static const char HEX_COLOR_FOCUS_BG_LIGHT[]       = "#ed0510";
+
+static const int TIME_CONVERSION_SECONDS_PER_DAY = 86400;
+static const int ZOOM_SCALE_MAIN_ICON            = 180;
+static const int ZOOM_SCALE_HOURLY_ICON          = 100;
+static const int SIZE_LOADING_SPINNER_DIMENSION  = 30;
+
 static hourly_weather_t hourly_forecast[TOTAL_HOURS];
 static date_time_t dt;
 
-// Top UI elements
 static lv_obj_t *date_container;
 static lv_obj_t *date_lbl;
 static lv_obj_t *current_temp_lbl;
@@ -29,7 +42,6 @@ static lv_obj_t *precip_lbl;
 static lv_obj_t *wind_lbl;
 static lv_obj_t *main_icon;
 
-// Bottom card elements
 static lv_obj_t *hourly_time_lbl;
 static lv_obj_t *hourly_temp_lbl;
 static lv_obj_t *hourly_hum_lbl;
@@ -40,7 +52,6 @@ static lv_obj_t *bottom_panel_container;
 static lv_obj_t *single_card;
 static lv_obj_t *loading_spinner = NULL;
 
-// Dynamic offset metrics
 static int current_hour_offset = 0;
 static int date_day_offset = 0;
 static bool date_active_held = false;
@@ -112,13 +123,13 @@ static void reset_weather_data(void) {
     if (wind_lbl)          lv_label_set_text(wind_lbl, "W: 0km/h");
     if (main_icon)        lv_img_set_src(main_icon, &sunny);
 
-    update_card_data("#6e829b", "#28374b");
+    update_card_data(HEX_COLOR_TEXT_SECONDARY, HEX_COLOR_TEXT_PRIMARY);
 }
 
 static void update_date_string(const char *forced_color, bool commit_new_date) {
     if (!date_lbl) return;
 
-    const char *date_clr = (forced_color) ? forced_color : "#ffffff"; 
+    const char *date_clr = (forced_color) ? forced_color : HEX_COLOR_TEXT_PRIMARY; 
 
     struct tm broken_time = {0};
     broken_time.tm_year = dt.year - 1900; 
@@ -130,7 +141,7 @@ static void update_date_string(const char *forced_color, bool commit_new_date) {
     broken_time.tm_isdst = -1;
 
     time_t epoch_seconds = mktime(&broken_time);
-    epoch_seconds += (time_t)date_day_offset * 86400;
+    epoch_seconds += (time_t)date_day_offset * TIME_CONVERSION_SECONDS_PER_DAY;
 
     struct tm *normalized_time = localtime(&epoch_seconds);
 
@@ -165,7 +176,7 @@ static void get_offset_date_snapshot(date_time_t *out_date) {
     broken_time.tm_isdst = -1;
 
     time_t epoch_seconds = mktime(&broken_time);
-    epoch_seconds += (time_t)date_day_offset * 86400;
+    epoch_seconds += (time_t)date_day_offset * TIME_CONVERSION_SECONDS_PER_DAY;
 
     struct tm *normalized_time = localtime(&epoch_seconds);
     
@@ -186,15 +197,15 @@ static void trigger_dated_weather_request(const date_time_t *target_date) {
         lv_obj_add_flag(single_card, LV_OBJ_FLAG_HIDDEN);
         
         loading_spinner = lv_spinner_create(bottom_panel_container);
-        lv_obj_set_size(loading_spinner, 30, 30);
+        lv_obj_set_size(loading_spinner, SIZE_LOADING_SPINNER_DIMENSION, SIZE_LOADING_SPINNER_DIMENSION);
         lv_obj_align(loading_spinner, LV_ALIGN_CENTER, 0, 0);
-        lv_obj_set_style_arc_color(loading_spinner, lv_color_white(), LV_PART_INDICATOR);
+        lv_obj_set_style_arc_color(loading_spinner, COLOR_THEME_TEXT_SECONDARY, LV_PART_INDICATOR);
     }
 
     LOG_INF("Batch action committed. Sending BLE request for: %02d/%02d/%04d", 
             target_date->day, target_date->month, target_date->year);
 
-    request_ble_resource(DATED_WEATHER_REQUEST, target_date);
+    request_ble_resource(DATED_WEATHER_REQUEST, (void*)target_date);
 }
 
 static void refresh_weather_ui_data(void) {
@@ -246,19 +257,16 @@ static void refresh_weather_ui_data(void) {
     current_hour_offset = (int)target_hour;
     
     if (single_card && lv_obj_has_state(single_card, LV_STATE_FOCUSED)) {
-        update_card_data("#ff0000", "#000000");
+        update_card_data(HEX_COLOR_TEXT_SECONDARY, HEX_COLOR_FOCUS_BG);
     } else if (bottom_panel_container && lv_obj_has_state(bottom_panel_container, LV_STATE_FOCUSED)) {
-        update_card_data("#0055ff", "#28374b");
+        update_card_data(HEX_COLOR_TEXT_SECONDARY, HEX_COLOR_TEXT_TERTIARY);
     } else {
-        update_card_data("#6e829b", "#28374b");
+        update_card_data(HEX_COLOR_TEXT_SECONDARY, HEX_COLOR_TEXT_PRIMARY);
     }
 
-    update_date_string("#00ff00", false);
+    update_date_string(HEX_COLOR_TEXT_TERTIARY_LIGHT, false);
 }
 
-// ----------------------------------------------------------------------
-// Date Component Event Callback
-// ----------------------------------------------------------------------
 static void date_key_event_cb(lv_event_t * e) {
     lv_event_code_t code = lv_event_get_code(e);
     
@@ -271,10 +279,10 @@ static void date_key_event_cb(lv_event_t * e) {
             if (!date_active_held) {
                 date_time_t query_date;
                 get_offset_date_snapshot(&query_date);
-                update_date_string("#00ff00", true); 
+                update_date_string(HEX_COLOR_FOCUS_BG_LIGHT, true); 
                 trigger_dated_weather_request(&query_date);
             } else {
-                update_date_string("#ff0000", false);
+                update_date_string(HEX_COLOR_FOCUS_BG_LIGHT, false);
             }
             
             lv_event_stop_bubbling(e);
@@ -282,20 +290,20 @@ static void date_key_event_cb(lv_event_t * e) {
         else if (key == LV_KEY_RIGHT) {
             if (date_active_held) {
                 date_day_offset++;
-                update_date_string("#ff0000", false); 
+                update_date_string(HEX_COLOR_FOCUS_BG_LIGHT, false); 
                 lv_event_stop_bubbling(e);
             }
         } 
         else if (key == LV_KEY_LEFT) {
             if (date_active_held) {
                 date_day_offset--;
-                update_date_string("#ff0000", false); 
+                update_date_string(HEX_COLOR_FOCUS_BG_LIGHT, false); 
                 lv_event_stop_bubbling(e);
             }
         }
     }
     else if (code == LV_EVENT_FOCUSED) {
-        update_date_string("#00ff00", false); 
+        update_date_string(HEX_COLOR_TEXT_TERTIARY_LIGHT, false); 
         lv_event_stop_bubbling(e);
     }
     else if (code == LV_EVENT_DEFOCUSED) {
@@ -303,18 +311,15 @@ static void date_key_event_cb(lv_event_t * e) {
             date_active_held = false;
             date_time_t query_date;
             get_offset_date_snapshot(&query_date);
-            update_date_string("#ffffff", true); 
+            update_date_string(HEX_COLOR_TEXT_PRIMARY_LIGHT, true); 
             trigger_dated_weather_request(&query_date);
         } else {
-            update_date_string("#ffffff", false); 
+            update_date_string(HEX_COLOR_TEXT_PRIMARY_LIGHT, false); 
         }
         lv_event_stop_bubbling(e);
     }
 }
 
-// ----------------------------------------------------------------------
-// Child Card Event Callback
-// ----------------------------------------------------------------------
 static void card_key_event_cb(lv_event_t * e) {
     lv_event_code_t code = lv_event_get_code(e);
     
@@ -324,29 +329,26 @@ static void card_key_event_cb(lv_event_t * e) {
         if (key == LV_KEY_RIGHT) {
             if (current_hour_offset >= (TOTAL_HOURS - 1)) return;
             current_hour_offset++;
-            update_card_data("#ff0000", "#000000");
+            update_card_data(HEX_COLOR_TEXT_SECONDARY, HEX_COLOR_FOCUS_BG);
             lv_event_stop_bubbling(e);
         } 
         else if (key == LV_KEY_LEFT) {
             if (current_hour_offset <= 0) return;
             current_hour_offset--;
-            update_card_data("#ff0000", "#000000");
+            update_card_data(HEX_COLOR_TEXT_SECONDARY, HEX_COLOR_FOCUS_BG);
             lv_event_stop_bubbling(e);
         }
     }
     else if (code == LV_EVENT_FOCUSED) {
-        update_card_data("#ff0000", "#000000"); 
+        update_card_data(HEX_COLOR_TEXT_SECONDARY, HEX_COLOR_FOCUS_BG); 
         lv_event_stop_bubbling(e);              
     }
     else if (code == LV_EVENT_DEFOCUSED) {
-        update_card_data("#6e829b", "#28374b"); 
+        update_card_data(HEX_COLOR_TEXT_SECONDARY, HEX_COLOR_TEXT_TERTIARY); 
         lv_event_stop_bubbling(e);              
     }
 }
 
-// ----------------------------------------------------------------------
-// Parent Container Event Callback
-// ----------------------------------------------------------------------
 static void container_key_event_cb(lv_event_t * e) {
     lv_event_code_t code = lv_event_get_code(e);
     
@@ -360,17 +362,17 @@ static void container_key_event_cb(lv_event_t * e) {
         }
     }
     else if (code == LV_EVENT_FOCUSED) {
-        update_card_data("#0055ff", "#28374b"); 
+        update_card_data(HEX_COLOR_TEXT_SECONDARY, HEX_COLOR_TEXT_TERTIARY); 
     }
     else if (code == LV_EVENT_DEFOCUSED) {
-        update_card_data("#6e829b", "#28374b"); 
+        update_card_data(HEX_COLOR_TEXT_SECONDARY, HEX_COLOR_TEXT_PRIMARY); 
     }
 }
 
 static void draw_app_ui(lv_obj_t* parent) {
     date_active_held = false;
     date_day_offset = 0;
-    custom_date_active = false; // Fresh start uses system clock base layout
+    custom_date_active = false; 
     loading_spinner = NULL; 
     
     lv_obj_clear_flag(parent, LV_OBJ_FLAG_SCROLLABLE);
@@ -387,19 +389,17 @@ static void draw_app_ui(lv_obj_t* parent) {
         current_hour_offset = TOTAL_HOURS - 1; 
     }
 
-    // Background Image
     lv_obj_t *bg_img = lv_img_create(parent);
     lv_img_set_src(bg_img, &weather_bg);
     lv_obj_align(bg_img, LV_ALIGN_CENTER, 0, 0);
     lv_obj_set_size(bg_img, LV_PCT(100), LV_PCT(100));
 
-    // Top Panel Main Metrics
     current_temp_lbl = lv_label_create(parent);
     char cur_temp_str[16];
     snprintf(cur_temp_str, sizeof(cur_temp_str), "%d°C", current_main_temp);
     lv_label_set_text(current_temp_lbl, cur_temp_str);
     lv_obj_set_style_text_font(current_temp_lbl, &lv_font_montserrat_24, 0);
-    lv_obj_set_style_text_color(current_temp_lbl, lv_color_white(), 0);
+    lv_obj_set_style_text_color(current_temp_lbl, COLOR_THEME_TEXT_PRIMARY, 0);
     lv_obj_align(current_temp_lbl, LV_ALIGN_TOP_LEFT, 10, 10);
 
     humidity_lbl = lv_label_create(parent);
@@ -407,7 +407,7 @@ static void draw_app_ui(lv_obj_t* parent) {
     snprintf(cur_hum_str, sizeof(cur_hum_str), "H: %d%%", current_now.humidity);
     lv_label_set_text(humidity_lbl, cur_hum_str);
     lv_obj_set_style_text_font(humidity_lbl, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(humidity_lbl, lv_color_make(180, 220, 255), 0);
+    lv_obj_set_style_text_color(humidity_lbl, COLOR_THEME_TEXT_SECONDARY, 0);
     lv_obj_align(humidity_lbl, LV_ALIGN_TOP_LEFT, 10, 38);
 
     precip_lbl = lv_label_create(parent);
@@ -415,7 +415,7 @@ static void draw_app_ui(lv_obj_t* parent) {
     snprintf(cur_precip_str, sizeof(cur_precip_str), "P: %d%%", current_now.precip_prob);
     lv_label_set_text(precip_lbl, cur_precip_str);
     lv_obj_set_style_text_font(precip_lbl, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(precip_lbl, lv_color_make(180, 220, 255), 0);
+    lv_obj_set_style_text_color(precip_lbl, COLOR_THEME_TEXT_SECONDARY, 0);
     lv_obj_align(precip_lbl, LV_ALIGN_TOP_LEFT, 10, 50);
 
     wind_lbl = lv_label_create(parent);
@@ -423,15 +423,14 @@ static void draw_app_ui(lv_obj_t* parent) {
     snprintf(cur_wind_str, sizeof(cur_wind_str), "W: %dkm/h", current_now.wind_speed);
     lv_label_set_text(wind_lbl, cur_wind_str);
     lv_obj_set_style_text_font(wind_lbl, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(wind_lbl, lv_color_make(180, 220, 255), 0);
+    lv_obj_set_style_text_color(wind_lbl, COLOR_THEME_TEXT_SECONDARY, 0);
     lv_obj_align(wind_lbl, LV_ALIGN_TOP_LEFT, 10, 62);
 
     main_icon = lv_img_create(parent);
     lv_img_set_src(main_icon, get_icon_from_code(current_now.weather_code));
-    lv_img_set_zoom(main_icon, 180);
+    lv_img_set_zoom(main_icon, ZOOM_SCALE_MAIN_ICON);
     lv_obj_align(main_icon, LV_ALIGN_TOP_RIGHT, -2, 12);
 
-    // Date Layout Container Box
     date_container = lv_obj_create(parent);
     lv_obj_set_style_bg_opa(date_container, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(date_container, 0, 0);
@@ -441,19 +440,17 @@ static void draw_app_ui(lv_obj_t* parent) {
     lv_obj_align(date_container, LV_ALIGN_TOP_MID, 0, 80);
     lv_obj_clear_flag(date_container, LV_OBJ_FLAG_SCROLLABLE);
 
-    // Navigable Date Component Setup
     date_lbl = lv_label_create(date_container);
     lv_label_set_recolor(date_lbl, true); 
-    lv_obj_set_style_text_font(date_lbl, &lv_font_montserrat_10, 0); 
+    lv_obj_set_style_text_font(date_lbl, &lv_font_montserrat_10, 0);
     lv_obj_align(date_lbl, LV_ALIGN_CENTER, 0, 0);
 
     lv_obj_add_flag(date_container, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(date_container, date_key_event_cb, LV_EVENT_ALL, NULL);
     make_obj_navigable(date_container);
 
-    update_date_string("#ffffff", false);
+    update_date_string(HEX_COLOR_TEXT_PRIMARY_LIGHT, false);
 
-    // Structural Outer Container
     bottom_panel_container = lv_obj_create(parent);
     lv_obj_set_style_bg_opa(bottom_panel_container, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(bottom_panel_container, 0, 0);
@@ -466,7 +463,6 @@ static void draw_app_ui(lv_obj_t* parent) {
     lv_obj_add_flag(bottom_panel_container, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(bottom_panel_container, container_key_event_cb, LV_EVENT_ALL, NULL);
 
-    // Inner Navigation Card
     single_card = lv_obj_create(bottom_panel_container);
     lv_obj_set_style_bg_opa(single_card, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(single_card, 0, 0);
@@ -515,13 +511,13 @@ static void draw_app_ui(lv_obj_t* parent) {
 
     hourly_icon_img = lv_img_create(single_card);
     lv_obj_set_size(hourly_icon_img, LV_PCT(30), LV_PCT(100));
-    lv_img_set_zoom(hourly_icon_img, 100);
+    lv_img_set_zoom(hourly_icon_img, ZOOM_SCALE_HOURLY_ICON);
     lv_obj_align(hourly_icon_img, LV_ALIGN_RIGHT_MID, 0, 0);
 
     make_obj_navigable(bottom_panel_container);
     make_obj_navigable(single_card);
     
-    update_card_data("#6e829b", "#28374b"); 
+    update_card_data(HEX_COLOR_TEXT_SECONDARY, HEX_COLOR_TEXT_PRIMARY); 
 }
 
 static void delete_app_ui(lv_obj_t* parent_obj) {

@@ -14,5 +14,6 @@ void deinit_ui();
 void remove_shadow_and_outline();
 void make_obj_navigable();
 watchface_t* get_selected_wf();
+void update_notification_ui();
 
 #endif

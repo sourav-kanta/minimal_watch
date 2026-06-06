@@ -74,6 +74,114 @@ static void parse_date_time_payload(const uint8_t* payload) {
     update_persistant_time_state(epoch);
 }
 
+/**
+ * @brief Safely extracts a variable length string field from a payload buffer.
+ *
+ * @param[in]     payload      Pointer to the raw BLE payload stream.
+ * @param[in]     payload_len  The total size of the message payload.
+ * @param[in,out] current_idx  Pointer to the current extraction index tracking.
+ * @param[out]    dest_buf     Pointer to the destination buffer array inside the struct.
+ * @param[in]     dest_max     The absolute maximum size allocated for dest_buf (including \0).
+ *
+ * @return int 0 on success, negative error code on bounds violations.
+ */
+static int extract_lean_string(const uint8_t *payload, 
+                               uint16_t payload_len, uint16_t *current_idx,
+                               char *dest_buf, uint8_t dest_max) {
+    uint16_t idx = *current_idx;
+
+    if (idx >= payload_len) {
+        return -EBADMSG;
+    }
+
+    uint8_t str_len = payload[idx++];
+
+    if (idx + str_len > payload_len) {
+        return -EMSGSIZE;
+    }
+
+    uint8_t copy_bytes = (str_len < (dest_max - 1)) ? str_len : (dest_max - 1);
+
+    memcpy(dest_buf, &payload[idx], copy_bytes);
+    dest_buf[copy_bytes] = '\0'; // Force absolute safe string termination
+
+    *current_idx = idx + str_len;
+    return 0;
+}
+
+/**
+ * @brief This function extracts dynamic variable-length notification metrics transmitted over BLE.
+ *
+ * @param[in]  payload          Pointer to the source buffer containing raw incoming bytes.
+ * Must be verified to be at least 5 bytes long before calling.
+ * @param[in]  len              Total length of the payload parsed from the BLE packet header.
+ * @param[out] dest             Pointer to the destination notification structure where the
+ * unpacked fields will be saved.
+ *
+ * @verbatim
+ * ====================================================================================
+ * DYNAMIC PAYLOAD LENGTH-VALUE BYTE LAYOUT MAP
+ * ====================================================================================
+ * Total Stream Size: Variable (Leaned dynamic string pack)
+ * Layout uses an explicit length byte preceding every string parameter.
+ * No structural alignment holes or padding bytes are present.
+ *
+ * 1. ENUM IDENTIFIER (1 Byte)
+ * [0]         : app           (uint8_t  - Maps directly to phone_app_t enum)
+ *
+ * 2. VARIABLE TEXT STRING STREAM
+ * Because strings are dynamic, elements are accessed sequentially via tracking heads.
+ * Each text section follows a [1-byte length field] + [N-bytes data payload] pattern.
+ * * Layout sequence per string block:
+ * [+0]        : string_len    (uint8_t  - Characters count from Flutter environment)
+ * [+1 - +N]   : string_bytes  (char[]   - Raw UTF-8 bytes, no trailing '\0' over air)
+ *
+ * Stream Processing Sequence Order:
+ * - Extract App ID (Byte 0) -> Advanced index head to 1
+ * - Read App Name len       -> Extract App Name string  -> Move index head
+ * - Read Msg Body len       -> Extract Msg Body string  -> Move index head
+ * - Read Action Text len    -> Extract Action Text string -> Move index head
+ * - Read Dismiss Text len   -> Extract Dismiss Text string -> Match final len
+ * ====================================================================================
+ * @endverbatim
+ */
+
+/**
+ * @brief Parses a lean dynamic Length-Value packet into a notification_t structure.
+ */
+static int parse_notification_payload(const uint8_t *payload, uint16_t len, notification_t *dest) {
+    uint16_t idx = 0;
+    int err;
+
+    // Check baseline minimum: 1-byte app ID + 4 tracking lengths
+    if (len < 5) {
+        return -EINVAL;
+    }
+
+    dest->app = (phone_app_t)payload[idx++];
+
+    err = extract_lean_string(payload, len, &idx, dest->app_name, 14);
+    if (err < 0) return err;
+
+    err = extract_lean_string(payload, len, &idx, dest->body, 100);
+    if (err < 0) return err;
+
+    err = extract_lean_string(payload, len, &idx, dest->action_name, 15);
+    if (err < 0) return err;
+
+    err = extract_lean_string(payload, len, &idx, dest->dismiss_text, 15);
+    if (err < 0) return err;
+
+    if (idx != len) {
+        LOG_WRN("Payload tail checking warning: parsed %u bytes, expected %u", idx, len);
+    }
+
+    dest->action_handler = NULL;
+    dest->dismiss_handler = NULL;
+
+    return 0;
+}
+
 void handle_ble_response(const ble_msg_t* msg) {
     switch(msg->hdr.opcode) {
         case BLE_OP_TIME_UPDATE :
@@ -113,6 +221,30 @@ void handle_ble_response(const ble_msg_t* msg) {
             else {
                 LOG_ERR("Invalid weather message");
             }
+            break;
+        case BLE_OP_NOTIFICATION_SEND:
+            if (msg->hdr.len >= 5) { 
+                notification_t notification;
+                int err = parse_notification_payload(msg->payload, msg->hdr.len, &notification);
+
+                if (err == 0) {
+                    LOG_INF("NOTIFICATION RECEIVED: [%s] Type: %d",
+                              notification.app_name, notification.app);
+                    LOG_INF("Body: %s", notification.body);
+                    event_t event = {
+                        .payload_len = sizeof(notification_t),
+                        .data = &notification,
+                        .ev = EVENT_NOTIFICATION_RECEIVED
+                    };
+                    handle_event(&event);
+                } else {
+                    LOG_ERR("Failed to decode variable notification payload: %d", err);
+                }
+            }
+            else {
+                LOG_ERR("Invalid notification message length");
+            }
+            break;
     }
 }
 

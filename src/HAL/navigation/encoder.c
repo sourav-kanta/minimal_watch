@@ -75,7 +75,7 @@ static void input_cb(struct input_event *evt, void *user_data)
 
                     LOG_INF("LV_KEY_ENTER");
                     break;
-                case INPUT_KEY_BACK :
+                case INPUT_KEY_ESC :
                     pending_key = LV_KEY_ESC;
                     key_pending = true;
 

@@ -23,6 +23,7 @@ typedef uint8_t ble_opcode_t;
 #define BLE_OP_TIME_UPDATE ((ble_opcode_t)0x01)
 #define BLE_OP_WEATHER_UPDATE ((ble_opcode_t)0x02)
 #define BLE_OP_DATED_WEATHER_QUERY ((ble_opcode_t)0x03)
+#define BLE_OP_NOTIFICATION_SEND ((ble_opcode_t)0x04)
 
 typedef enum {
     BLE_TX,

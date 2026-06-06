@@ -7,8 +7,9 @@
 #include "managers/timers.h"
 #include "threads/lvgl_thread.h"
 #include "ui/watchface/wf_picker.h"
-#include "ui/appmgr_ui.h"
+#include "ui/appmgr_ui/appmgr_ui.h"
 #include "ui/util.h"
+#include "ui/notification_ui/notification_ui.h"
 
 static lv_obj_t *root_screen;
 static lv_obj_t *home_tab, *wf_page, *notify_page, *app_page;
@@ -87,6 +88,10 @@ void close_curr_page() {
             lv_obj_clean(app_page);
             del_app_manager_ui(app_page);
             break;
+        case NOTIFY :
+            del_notification_ui(notify_page);
+            lv_obj_clean(notify_page);
+            break;
         default :
             LOG_ERR("Unknown page to close");
             break;
@@ -101,6 +106,10 @@ void close_curr_page() {
  */
 void show_page(ui_state_t page) {
     switch(page) {
+        case NOTIFY :
+            LOG_INF("Open notification page");
+            draw_notification_ui(notify_page);
+            break;
         case WATCHFACE :
             selected_wf = select_wf();
             LOG_INF("Selected watchface : %s",
@@ -186,7 +195,7 @@ void handle_root_scr_actions(lv_event_t *ev) {
     if(key == LV_KEY_ENTER) {
         LOG_INF("Ok button");
         lv_event_stop_bubbling(ev);
-        lv_indev_wait_release(inp_dev);
+        //lv_indev_wait_release(inp_dev);
         lv_obj_t * focused = lv_group_get_focused(lv_group_get_default());
         if(focused == NULL) return;
         lv_obj_t* target = find_first_focusable_child_dfs(focused);
@@ -202,7 +211,7 @@ void handle_root_scr_actions(lv_event_t *ev) {
     // DFS backwards to get navigable parent
     if(key == LV_KEY_ESC) {
         LOG_INF("Back button");
-        lv_indev_wait_release(inp_dev);
+        //lv_indev_wait_release(inp_dev);
         lv_obj_t * focused = lv_group_get_focused(lv_group_get_default());
         if(focused == NULL) return;
         lv_event_stop_bubbling(ev);
@@ -213,7 +222,7 @@ void handle_root_scr_actions(lv_event_t *ev) {
             LOG_ERR("Unknown parent to navigate to");
 
     }
-    lv_indev_wait_release(inp_dev);
+    //lv_indev_wait_release(inp_dev);
 }
 
 
@@ -260,12 +269,13 @@ void init_ui() {
     lv_obj_add_flag(tabview_content, LV_OBJ_FLAG_EVENT_BUBBLE);
     lv_obj_remove_flag(tabview_content, LV_OBJ_FLAG_SCROLLABLE);
     // Add the pages and make them navigable
+    notify_page = lv_tabview_add_tab(home_tab, "Notifications");
+    remove_shadow_and_outline(notify_page);
     wf_page = lv_tabview_add_tab(home_tab, "Watchface");
     remove_shadow_and_outline(wf_page);
     app_page = lv_tabview_add_tab(home_tab, "Apps");
     remove_shadow_and_outline(app_page);
-    notify_page = lv_tabview_add_tab(home_tab, "Notifications");
-    remove_shadow_and_outline(notify_page);
+    lv_tabview_set_active(home_tab, 1, LV_ANIM_ON);
     lv_obj_add_event_cb(tabview_content, 
                         handle_root_scr_actions,
                         LV_EVENT_GESTURE,
@@ -330,3 +340,10 @@ lv_obj_t* get_root_screen() {
 watchface_t* get_selected_wf() {
     return selected_wf;
 }
+
+void update_notification_ui() {
+    if(get_current_ui_state() == NOTIFY) {
+        notification_ui_invalidate();
+    }
+}
+
